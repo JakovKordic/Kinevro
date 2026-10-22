@@ -2,20 +2,18 @@
 node_modules/
 .pnpm-store/
 
-# Vite / frontend builds
+# Frontend build output
 dist/
 dist-ssr/
 .vite/
+coverage/
+*.tsbuildinfo
 
 # Electron packaging output
 release/
 out/
 build/
 *.asar
-*.dmg
-*.exe
-*.msi
-*.AppImage
 
 # Logs
 logs/
@@ -24,7 +22,7 @@ npm-debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 
-# Environment secrets
+# Secrets / local environment
 .env
 .env.*
 !.env.example
@@ -46,28 +44,34 @@ venv/
 .mypy_cache/
 .ruff_cache/
 .ipynb_checkpoints/
+.coverage
+htmlcov/
 
-# Machine-learning outputs and datasets (keep small, intentional samples only)
+# ML outputs and private/large datasets
 data/raw/
+data/private/
 datasets/
+recordings/
+captures/
 checkpoints/
-models/*.pt
-models/*.pth
-models/*.onnx
+runs/
+wandb/
+mlruns/
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.safetensors
 *.h5
 *.pkl
+*.pickle
 *.joblib
 
-# .NET artifacts from any earlier prototype
+# .NET artifacts from old prototypes
 bin/
 obj/
 .vs/
 
-# Local test / coverage outputs
-coverage/
-test-results/
-
-# Local camera captures and exports
-recordings/
-captures/
+# Local exports
 exports/
+test-results/

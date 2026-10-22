@@ -1,34 +1,69 @@
-# Kinevro — Thesis Roadmap (Electron + React + TypeScript)
+# Kinevro — Thesis Roadmap (Electron + React + TypeScript + Python)
 
-## Project direction
+## 1. Project direction
 
-Kinevro is a webcam-based hand-gesture-controlled generative visual environment. The thesis investigates how static-pose and temporal gesture classification compare when used to control a real-time visual instrument.
+Kinevro is a webcam-based hand-gesture-controlled generative visual environment. The master's thesis compares static-pose and temporal gesture classification for reliable real-time control.
 
-**Primary research question:** How do static-pose and temporal gesture classifiers compare in reliability and responsiveness when controlling a real-time generative visual environment?
+**Research question:** How do static-pose and temporal gesture classifiers compare in reliability and responsiveness when controlling a real-time generative visual environment?
 
-The implementation should support measurable evaluation, not just a visually impressive demo. Track at least false activations, missed activations, response latency, and task-level usability.
+The project should evaluate false activations, missed activations, response latency, frame rate, and usability. These are research questions to measure, not outcomes to assume.
 
-## Recommended technology stack
+## 2. Final planned stack
 
-- **Desktop shell:** Electron
-- **Frontend/build:** React, TypeScript, Vite
-- **UI styling:** CSS
-- **Generative visuals:** Canvas 2D first; consider Three.js/WebGL only when the visual requirements justify it
-- **Hand tracking:** Browser-based MediaPipe hand landmarks as the first implementation path
-- **ML experiments:** Python, NumPy, pandas, scikit-learn; consider PyTorch if the temporal model needs it
-- **Research notebooks:** Jupyter or Google Colab
-- **Tests:** Vitest and React Testing Library for frontend logic; Python test tooling for ML code
-- **Version control:** Git and GitHub
+| Layer | Technology | Responsibility |
+|---|---|---|
+| Desktop shell | Electron | Application window, lifecycle, packaging |
+| UI | React + TypeScript + CSS | Controls, status, settings, feedback |
+| Frontend build | Vite | Development server and frontend build |
+| Generative rendering | Canvas 2D first; Three.js/WebGL if needed | Real-time visual environment |
+| Initial hand tracking | MediaPipe in the browser/renderer | Webcam access and hand-landmark extraction |
+| Runtime ML backend | Python | Gesture classification and ML-related processing |
+| ML/data libraries | NumPy, pandas, scikit-learn; PyTorch if needed | Feature processing, baselines, temporal model experiments |
+| Research | Jupyter / Google Colab | Offline data exploration, training, and evaluation |
+| Version control | Git + GitHub | Source history and reproducibility |
+| Tests | Vitest / React Testing Library; Python tests | UI logic, protocol, classifier tests |
 
-Keep Electron's main process, preload bridge, React renderer, vision code, and research code clearly separated. Do not expose unrestricted Node.js APIs to the renderer. Use `contextIsolation: true`, `nodeIntegration: false`, and a small, explicitly defined preload API.
+**Important distinction:** Electron's main process uses Node.js, and the React renderer uses TypeScript/JavaScript. That is normal for Electron. Python is the dedicated ML backend. This does not require rewriting the UI in Python.
 
-## Suggested repository structure
+## 3. Runtime architecture
+
+Initial planned data flow:
+
+1. The Electron main process opens the desktop window and manages application lifecycle.
+2. The React renderer displays the UI and generative visuals.
+3. The renderer requests camera permission and runs browser-compatible MediaPipe hand tracking.
+4. The tracking layer produces landmarks or derived features.
+5. A narrow, documented interface sends the required feature/sequence data to the Python ML process.
+6. Python returns classification results, confidence, and/or gesture events.
+7. The frontend applies activation rules and maps accepted events to visual parameters.
+8. The UI displays camera, tracking, and classifier status.
+
+Keep the protocol small and versioned. Do not send full video frames to Python unless an experiment shows that Python must own tracking. Prefer sending landmarks or compact feature sequences when that satisfies the research design.
+
+### Python process communication
+
+For the first integrated version, choose one communication method only after the minimal app runs:
+- **Standard input/output (stdio):** a simple local worker protocol, often a good starting point for one desktop app and one worker.
+- **Loopback-only local API/socket:** useful if independent endpoints or multiple clients are genuinely needed.
+
+Do not add FastAPI, a database, or a message broker without a concrete requirement. Validate messages and handle worker startup, shutdown, timeouts, and crashes.
+
+## 4. Electron security baseline
+
+- Set `contextIsolation: true`.
+- Keep `nodeIntegration: false` in the renderer.
+- Use a preload script and `contextBridge` to expose only a small, explicit API.
+- Validate IPC messages and arguments.
+- Do not load untrusted remote content into a privileged window.
+- Keep camera state visible and request camera permission explicitly.
+- Do not save webcam video by default.
+- Keep raw recordings and private datasets out of version control.
+
+## 5. Suggested repository structure
 
 ```text
 Kinevro/
 ├── desktop/                 # Electron main process and preload
-│   ├── main.ts
-│   └── preload.ts
 ├── src/                     # React renderer
 │   ├── app/
 │   ├── components/
@@ -38,12 +73,13 @@ Kinevro/
 │   ├── styles/
 │   └── main.tsx
 ├── public/
-├── vision/                  # Tracking experiments or bridge code
-├── ml/                      # Dataset preparation and classifier experiments
-├── research/                # Protocol, notes, analysis, thesis material
+├── python/                  # Runtime ML backend and protocol
+├── ml/                      # Training, evaluation, notebooks/scripts
+├── vision/                  # Optional tracking experiments; don't duplicate runtime code
+├── research/
 ├── protocol/
 ├── tests/
-├── artifacts/               # Exported evaluation outputs; avoid committing large raw data
+├── artifacts/
 ├── docs/
 ├── scripts/
 ├── package.json
@@ -53,123 +89,128 @@ Kinevro/
 └── README.md
 ```
 
-This is a target structure, not a requirement to create every directory immediately. Add folders when their responsibilities become real.
+Create directories when their responsibilities are needed; this is a target map, not a requirement to create empty folders now. Keep runtime Python code separate from offline training experiments.
 
-## 16-week plan
+## 6. Sixteen-week roadmap
 
-### Phase 1 — Project foundation (Week 1)
-- Confirm the research question, hypotheses, measurable outcomes, and scope.
-- Replace the old WPF implementation path with an Electron + Vite + React + TypeScript starter.
-- Confirm the app can run in development and open as a desktop window.
-- Add a basic automated test and document the setup commands.
-- Record versions and major architecture decisions.
+### Week 1 — Foundation
+- Confirm scope, research question, hypotheses, metrics, and repo state.
+- Create an Electron + Vite + React + TypeScript starter in the existing repository.
+- Confirm it opens a desktop window and has a basic test.
+- Record dependency versions and architecture decisions.
 
-**Deliverable:** a minimal Electron desktop app with a working React UI.
+**Deliverable:** working minimal Electron desktop app.
 
-### Phase 2 — UI and interaction model (Weeks 2–3)
-- Build the main workspace: visual canvas, gesture status, camera status, and settings.
-- Define a small set of gestures and the actions each gesture controls.
-- Separate UI state from classifier output.
-- Add clear permission/error states for camera access.
+### Weeks 2–3 — Interface
+- Build the workspace, visual canvas, camera status, gesture status, and settings.
+- Define a small gesture vocabulary and the controls each gesture affects.
+- Implement simulated gesture events before connecting a camera.
+- Add explicit camera permission and error states.
 
-**Deliverable:** usable interface with simulated gesture events.
+**Deliverable:** interface testable without ML.
 
-### Phase 3 — Generative rendering (Weeks 4–5)
-- Implement one reliable Canvas 2D visual system (for example, particles, trails, or flowing shapes).
-- Map a few abstract control values to visual parameters.
-- Measure frame rate and avoid expensive per-frame React state updates.
-- Add a predictable reset state so experiments can start consistently.
+### Weeks 4–5 — Generative visuals
+- Implement one reliable Canvas 2D effect, such as particles, trails, or flowing shapes.
+- Map abstract control values to visual parameters.
+- Keep high-frequency animation out of React's state-update path.
+- Add reset behavior and measure rendering frame rate.
 
 **Deliverable:** responsive visual instrument controlled by simulated inputs.
 
-### Phase 4 — Webcam and landmarks (Weeks 6–7)
-- Add webcam permission and live camera preview.
-- Integrate hand-landmark detection in the renderer using a browser-compatible library.
-- Keep camera frames and landmark updates out of React's high-frequency render path where possible.
-- Define a stable boundary between landmark extraction and gesture classification.
-- Test different lighting, hand positions, backgrounds, and camera distances.
+### Weeks 6–7 — Webcam and landmarks
+- Add webcam access and a live preview.
+- Integrate browser-compatible MediaPipe hand tracking.
+- Show landmarks and tracking confidence/status.
+- Test lighting, background, distance, and hand position.
+- Keep tracking output separate from the classifier interface.
 
-**Deliverable:** real-time hand landmarks with basic diagnostics.
+**Deliverable:** real-time landmarks and diagnostics.
 
-### Phase 5 — Static baseline and pilot (Weeks 8–9)
-- Implement a rule-based or static-pose baseline first.
-- Add smoothing, confidence thresholds, and a short activation cooldown where appropriate.
-- Run a small pilot and refine the protocol before collecting final data.
-- Log timestamps, predictions, confidence, activations, and ground-truth labels in a consistent format.
+### Weeks 8–9 — Static baseline and pilot
+- Implement a rule-based or static-pose baseline in Python.
+- Define thresholds, smoothing, cooldowns, and neutral/reset behavior.
+- Run a small pilot and refine the study protocol.
+- Log timestamps, predictions, confidence, accepted events, and labels.
 
-**Deliverable:** baseline classifier and pilot results.
+**Deliverable:** reproducible baseline and pilot findings.
 
-### Phase 6 — Temporal classification (Weeks 10–11)
-- Define a fixed temporal window and sequence representation for landmark data.
-- Establish a simple temporal baseline before trying a more complex model.
-- Compare a temporal model against the static baseline using the same data splits and evaluation conditions.
-- Prevent leakage between train/test splits, especially when multiple samples come from the same participant or recording session.
+### Weeks 10–11 — Temporal classification
+- Define sequence windows and features.
+- Establish a simple temporal baseline before using a complex model.
+- Train/evaluate with participant- or session-aware splits to avoid leakage.
+- Compare static and temporal methods on equivalent data and conditions.
 - Report per-class metrics and confusion matrices, not accuracy alone.
 
 **Deliverable:** reproducible static-versus-temporal comparison.
 
-### Phase 7 — Desktop integration and reliability (Week 12)
-- Connect classifier outputs to a narrow gesture-event interface.
-- Use Electron IPC only for capabilities that genuinely need the main process.
-- Add graceful handling for camera denial, device loss, classifier failure, and app restart.
-- Test packaged desktop builds, not just development mode.
+### Week 12 — Integration and reliability
+- Connect the frontend to the Python worker through the selected protocol.
+- Add startup/shutdown, timeouts, worker failure handling, and clear status.
+- Test camera loss and classifier failure.
+- Test a packaged Electron build.
 
 **Deliverable:** integrated desktop prototype.
 
-### Phase 8 — Evaluation (Weeks 13–14)
-- Run the planned study using a documented protocol and consistent tasks.
-- Measure false activations, missed activations, response latency, and frame rate.
-- Record participant/session conditions and any exclusions.
-- Analyze results with appropriate descriptive statistics and uncertainty; avoid claims unsupported by the sample size.
-- Keep raw data, derived data, and analysis scripts clearly distinguished.
+### Weeks 13–14 — Evaluation
+- Freeze the protocol before final data collection.
+- Measure false activations, missed activations, response latency, frame rate, and usability.
+- Record conditions and exclusions.
+- Analyze results with appropriate statistics and uncertainty.
+- Keep raw, derived, and analysis data distinct.
 
 **Deliverable:** evaluation dataset and reproducible analysis.
 
-### Phase 9 — Thesis and release (Weeks 15–16)
+### Weeks 15–16 — Thesis and release
 - Write methods, implementation, results, limitations, and future work.
-- Explain the trade-offs between static and temporal approaches.
-- Include the study protocol, metrics, model details, and reproducibility instructions.
-- Prepare a stable demo, installation instructions, and a clean repository.
+- Explain the trade-offs found between static and temporal classification.
+- Document the protocol, model, data splits, and reproducibility steps.
+- Prepare a stable demo, setup guide, and repository.
 
-**Deliverable:** thesis draft/final submission and reproducible Kinevro release.
+**Deliverable:** thesis and reproducible Kinevro release.
 
-## Research design essentials
+## 7. Research design
 
 ### Candidate hypotheses
-- Temporal classification may reduce false activations for gestures defined by motion.
-- Static-pose classification may have lower computational and response overhead for gestures that can be recognized from a single frame.
-- The practical result depends on gesture vocabulary, recording conditions, model design, and the activation policy.
-
-Treat these as hypotheses to test, not as conclusions.
+- Temporal classification may reduce false activations for motion-defined gestures.
+- Static-pose classification may have lower inference overhead for gestures recognizable from one frame.
+- The outcome depends on gesture vocabulary, environment, model, and activation policy.
 
 ### Suggested metrics
-- **False activations:** unintended control events per minute or per task.
+- **False activations:** unintended events per minute or task.
 - **Missed activations:** proportion of intended gestures that fail to trigger.
-- **Response latency:** elapsed time from the defined gesture onset to the accepted control event.
-- **Frame rate:** rendering performance during interaction.
-- **Usability:** a short, consistent questionnaire and/or task completion measures.
+- **Response latency:** time from defined gesture onset to accepted event.
+- **End-to-end latency:** time from gesture onset to visible effect.
+- **Frame rate:** rendering performance under interaction.
+- **Usability:** a consistent questionnaire and/or task completion metrics.
 
-Define event onset and the timing measurement procedure before the final study.
+Define onset, event acceptance, and timing procedures before final collection.
 
-## Implementation principles
+## 8. Implementation principles
 
-1. **Build the smallest end-to-end loop first:** camera → landmarks → classifier → gesture event → visual change.
-2. **Keep rendering independent from classification.** The visual engine should accept abstract control events rather than know model internals.
-3. **Use Electron as the shell, not as the whole architecture.** React runs in the renderer; privileged desktop capabilities stay behind preload and IPC.
-4. **Avoid a separate Python runtime until needed.** Start with browser-compatible hand tracking and lightweight classification. Introduce a Python worker/service only if model requirements or libraries make it worthwhile.
-5. **Optimize after measuring.** Use Canvas 2D first; move to Three.js/WebGL when the desired visual complexity calls for it.
-6. **Make experiments reproducible.** Version the protocol, document data splits, and keep evaluation scripts with the project.
-7. **Protect privacy.** Make camera state visible, request permission explicitly, and do not save video by default.
+1. Build the smallest end-to-end loop first: simulated event → visual change.
+2. Add the webcam and tracking before integrating the Python classifier.
+3. Keep rendering independent of model internals.
+4. Keep the Python runtime backend separate from offline training scripts.
+5. Start with Canvas 2D; use Three.js/WebGL if the target visuals require it.
+6. Measure latency and reliability instead of assuming a model is better.
+7. Use reproducible splits and version the protocol.
+8. Add only the communication infrastructure needed by the first working loop.
+9. Do not add Java or .NET as a separate action engine; they are not part of the current planned stack.
 
-## Development milestones
+## 9. Milestones
 
 - [ ] Electron + Vite + React + TypeScript launches locally
-- [ ] Renderer and main process are separated safely
-- [ ] Visual canvas responds to simulated controls
+- [ ] Safe preload bridge and renderer separation
+- [ ] Canvas responds to simulated controls
 - [ ] Webcam preview and hand landmarks work
+- [ ] Python classifier runs independently with test inputs
+- [ ] Frontend/backend message protocol is documented and tested
 - [ ] Static baseline is logged and evaluated
-- [ ] Temporal baseline/model is logged and evaluated
-- [ ] Evaluation protocol is finalized before final data collection
-- [ ] Metrics can be reproduced from saved logs
-- [ ] Packaged desktop build is tested on the target machine
-- [ ] Thesis documents limitations and reproducibility details
+- [ ] Temporal approach is logged and evaluated
+- [ ] Evaluation metrics are reproducible
+- [ ] Packaged desktop build is tested
+- [ ] Thesis reports results and limitations accurately
+
+## 10. Superseded architecture notes
+
+This document replaces older plans that proposed WPF/WebView2/.NET or a Java action engine. Those are not part of the current Kinevro architecture. Keep older files for historical reference if desired, but label them clearly as superseded and do not use them as implementation instructions.
