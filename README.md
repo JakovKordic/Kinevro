@@ -1,46 +1,55 @@
 # Kinevro
 
-Kinevro is a generative visual environment controlled by webcam-based hand gestures, exploring real-time gesture recognition, interactive graphics, and the reliability of static versus temporal gesture classification.
+Kinevro is a generative visual environment controlled by webcam-based hand gestures. The master's thesis investigates the reliability and responsiveness of static-pose versus temporal gesture classification for real-time visual control.
 
-## Project status
+## Current planned stack
 
-The planned application stack is **Electron + React + TypeScript + Vite**. Electron provides the desktop shell; React and TypeScript power the interface; Vite provides the development/build workflow. The initial visual engine will use Canvas 2D, with Three.js/WebGL considered if required by the intended visuals.
+- **Desktop shell:** Electron
+- **Frontend:** React + TypeScript + CSS
+- **Build tooling:** Vite
+- **Generative visuals:** Canvas 2D first; Three.js/WebGL if justified
+- **Initial hand tracking:** MediaPipe in the browser renderer
+- **Runtime ML backend:** Python
+- **ML/data tools:** NumPy, pandas, scikit-learn; PyTorch if needed
+- **Research:** Jupyter / Google Colab
+- **Version control:** Git and GitHub
 
-## Research focus
+Electron and the frontend use JavaScript/TypeScript because that is Electron's normal application model. Python is the dedicated backend for runtime ML and classifier-related processing. The project does not currently include a separate Java or .NET service.
 
-The thesis compares static-pose and temporal gesture classification for controlling a real-time visual environment. Evaluation should consider false activations, missed activations, response latency, and usability rather than accuracy alone.
+## Planned data flow
 
-## Planned architecture
+1. Electron opens the desktop window.
+2. React renders the UI and generative scene.
+3. Browser-compatible MediaPipe tracks the hand and produces landmarks.
+4. A small, versioned protocol passes landmarks/features or sequences to Python.
+5. Python returns classifier results or gesture events.
+6. The frontend applies activation rules and updates the visual scene.
 
-- `desktop/` — Electron main process and preload bridge
-- `src/` — React renderer, UI, gesture interaction, and generative visuals
-- `vision/` — hand-tracking experiments and integration code
-- `ml/` — dataset preparation, training, and evaluation
-- `research/` and `protocol/` — research notes, study protocol, and analysis
-- `tests/` — frontend and model-related tests
-- `docs/` — project and architecture documentation
+The exact process transport (stdio or a loopback-only API/socket) will be selected when integration begins. Avoid introducing a server framework until there is a concrete need.
 
-These directories can be introduced incrementally; do not create empty folders just to match the diagram.
+## Security
 
-## Security baseline
+- Use `contextIsolation: true` and `nodeIntegration: false`.
+- Expose only a narrow API through Electron's preload script and `contextBridge`.
+- Validate IPC and backend messages.
+- Keep webcam processing local by default; do not record video by default.
+- Do not commit private datasets, recordings, secrets, or large model artifacts.
 
-The Electron renderer should not have unrestricted Node.js access. Keep `nodeIntegration` disabled, enable `contextIsolation`, and expose only the minimum required API through a preload script and `contextBridge`. Validate IPC messages and avoid loading untrusted remote content into a privileged window.
+## Repository map
 
-## Development plan
+- `desktop/` — Electron main process and preload
+- `src/` — React renderer, UI, and visuals
+- `python/` — runtime Python backend and communication protocol
+- `ml/` — offline training, notebooks, and evaluation
+- `vision/` — optional tracking experiments; avoid duplicating runtime code
+- `research/`, `protocol/`, `tests/`, `docs/` — thesis, study protocol, tests, and documentation
 
-See [`Kinevro_Thesis_Roadmap_Electron.md`](Kinevro_Thesis_Roadmap_Electron.md) for the 16-week plan, research metrics, milestones, and implementation principles.
+Directories can be created incrementally. See [`Kinevro_Thesis_Roadmap_Electron.md`](Kinevro_Thesis_Roadmap_Electron.md) for the roadmap and milestones.
 
-## Planned development workflow
+## Development
 
-Once the starter project is created, the usual workflow will be:
-
-```bash
-npm install
-npm run dev
-```
-
-The exact scripts depend on the selected Electron/Vite starter template. Do not assume these commands are available until `package.json` has been created and checked.
+The exact commands depend on the selected starter template. Once `package.json` exists, inspect its scripts before assuming which commands are available.
 
 ## Research integrity
 
-Treat static-versus-temporal performance as an empirical question. Use consistent data splits and evaluation conditions, avoid leakage between participants or recording sessions, and document limitations and deviations from the study protocol.
+Treat the static-versus-temporal comparison as an empirical question. Use equivalent conditions, avoid participant/session leakage between train and test splits, and report false activations, missed activations, latency, frame rate, and limitations.
