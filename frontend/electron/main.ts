@@ -7,7 +7,7 @@ function createWindow() {
     width: 800,
     height: 600,
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      preload: join(__dirname, '../preload/index.mjs'),
     },
   })
   if(process.env.ELECTRON_RENDERER_URL) {

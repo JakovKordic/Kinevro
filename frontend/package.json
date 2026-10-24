@@ -6,7 +6,7 @@
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && electron-vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "dev:renderer": "vite"
