@@ -3,11 +3,13 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
+  "main": "out/main/index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc -b && vite build",
+    "dev": "electron-vite dev",
+    "build": "tsc -b && electron-vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "dev:renderer": "vite"
   },
   "dependencies": {
     "react": "^19.3.1",
